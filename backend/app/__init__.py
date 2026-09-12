@@ -1,0 +1,1 @@
+"""Phiscatcher FastAPI backend foundation."""
