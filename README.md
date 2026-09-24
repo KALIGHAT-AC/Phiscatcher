@@ -306,12 +306,13 @@ Run browser investigations with appropriate isolation and avoid interacting with
 
 ### Contributors
 
-* **Frontend Development** →
-* **Backend Development** →
-* **Packet Capture & Analysis** →
-* **Browser Automation** →
-* **Threat Detection & Model Training** →
-* **Documentation & Testing** →
+* **Frontend Development** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
+* **Backend Development** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
+* **Packet Capture & Analysis** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
+* **Browser Automation** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
+* **Threat Detection & Model Training** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
+* **Documentation & Testing** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl) and [@KALIGHAT-AC](https://github.com/KALIGHAT-AC)
+* **Bootloader** →
 
 ### 🤝 Contribution Guidelines
 
