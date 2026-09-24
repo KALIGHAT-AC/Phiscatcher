@@ -1,378 +1,295 @@
 # 📘 Phiscatcher — Phishing Traffic Analysis Using Wireshark
 
-> A responsive web tool that investigates a user-supplied website URL, captures and analyses its observable network traffic, and presents evidence-based statistics to assess whether the site is likely phishing or legitimate.
+> A real-time network-flow monitoring dashboard that uses TShark, machine learning, and rule-based analysis to identify potentially suspicious or phishing-related traffic.
 
 ## Overview
 
-**Phiscatcher is a phishing-website detector, not a phishing simulator.** It does not create, host, or provide phishing pages.
+**Phiscatcher** is a local network-flow monitoring application that captures selected packet metadata using **TShark**, processes traffic with **Node.js and Python**, and analyzes each flow using a trained **Random Forest** machine-learning pipeline.
 
-A user submits an arbitrary URL—whether suspicious or known to be genuine. Phiscatcher validates and investigates that URL in a controlled browser workflow, observes available URL, domain, DNS, HTTP(S), redirect, TLS, and network-traffic signals, then produces a risk score, evidence, statistics, and a phishing-versus-legitimate verdict.
+The system extracts **34 traffic and DNS-domain features**, generates a phishing probability, combines the ML result with heuristic rules, and classifies flows as:
 
-The verdict is an assessment based on observable indicators; it is not proof of malicious intent and should be reviewed alongside the supporting evidence.
+- 🟢 **BENIGN**
+- 🟡 **SUSPICIOUS**
+- 🔴 **PHISHING**
 
-## Workflow and Architecture
+Analyzed flows are stored in **MongoDB** and delivered to a **React dashboard** in real time using **Socket.IO**.
+
+> Phiscatcher provides a statistical risk assessment of observed network flows. A classification should not be treated as proof of malicious activity.
+
+## Architecture
 
 ```text
-User-supplied URL
-        │
-        ▼
-URL validation and normalization
-        │
-        ├─────────────┬─────────────┬──────────────┐
-        ▼             ▼             ▼              ▼
- URL/domain       DNS lookup     HTTP(S)      TLS/certificate
- feature scan                   and redirects    inspection
-        │             │             │              │
-        └─────────────┴──────┬──────┴──────────────┘
-                              ▼
-             Controlled browser investigation
-             (Playwright; no form submission or credential entry)
-                              │
-                              ▼
-                  Observable network traffic
-                              │
-                              ▼
-                Packet capture and PCAP storage
-                         (Scapy planned)
-                              │
-                              ▼
-            Protocol statistics and PCAP analysis
-       (Scapy plus Wireshark/TShark integration — TBD)
-                              │
-                              ▼
-        Detection indicators → rules → risk score → verdict
-                              │
-                              ▼
-     Dashboard, evidence, history, and optional live updates
+                 Network Interface
+                        │
+                        ▼
+                  ┌───────────┐
+                  │  TShark   │
+                  └─────┬─────┘
+                        │ Packet metadata
+                        ▼
+                  ┌───────────┐
+                  │  Node.js  │
+                  │  Backend  │
+                  └─────┬─────┘
+                        │ JSON Lines
+                        ▼
+                  ┌───────────┐
+                  │  Python   │
+                  │ Processor │
+                  └─────┬─────┘
+                        │
+              34 traffic/domain features
+                        │
+                        ▼
+                ┌───────────────┐
+                │ Random Forest │
+                │    Model      │
+                └───────┬───────┘
+                        │
+                 ML probability
+                        │
+                        ▼
+                ┌───────────────┐
+                │ Rule + ML     │
+                │   Scoring     │
+                └───────┬───────┘
+                        │
+              BENIGN / SUSPICIOUS /
+                    PHISHING
+                        │
+             ┌──────────┴──────────┐
+             ▼                     ▼
+        ┌──────────┐          ┌──────────┐
+        │ MongoDB  │          │ Socket.IO│
+        └──────────┘          └────┬─────┘
+                                   │
+                                   ▼
+                            React Dashboard
 ```
 
-### Important design decision: Wireshark and TShark
+## Key Features
 
-Wireshark is part of the intended analysis workflow and generated PCAP files should remain inspectable in it. The final programmatic integration—such as Scapy-only parsing, calling **TShark** for selected fields, or a hybrid approach—has **not yet been decided**. This README deliberately does not claim a final Wireshark-versus-TShark architecture.
+- 📡 Live packet metadata capture using **TShark**
+- 🔄 Bidirectional network-flow aggregation
+- 🧠 Machine-learning inference using a **Random Forest** pipeline
+- 📊 **34 traffic and DNS-domain features**
+- 🛡️ Rule-based threat scoring combined with ML probability
+- 🗄️ MongoDB persistence for analyzed flows
+- ⚡ Real-time updates through **Socket.IO**
+- 📈 Traffic and threat-distribution charts
+- 📋 Latest analyzed-flow table
+- 🖥️ React-based monitoring dashboard
 
-## Planned Features
+## Technology Stack
 
-- URL entry, validation, normalization, and scan controls
-- URL, hostname, domain, subdomain, port, path, and query-feature analysis
-- DNS resolution and DNS-record observations
-- HTTP/HTTPS response inspection and redirect-chain analysis
-- TLS and certificate metadata inspection, where available
-- Controlled browser visits with Playwright to observe page requests, resources, and redirects
-- Packet capture, PCAP storage, and packet/protocol statistics
-- DNS, TCP, HTTP, TLS, and IP traffic analysis from observable data
-- Phishing indicators from URL, domain, DNS, HTTP(S), TLS, and traffic behaviour
-- Rule engine, explainable evidence, risk scoring, and phishing/likely-legitimate verdicts
-- Dashboard with protocol charts, traffic charts, packet views, alerts, timelines, and evidence panels
-- Optional real-time scan statistics over WebSockets
-- Scan history and capture-detail views; MongoDB remains optional/TBD
-- ML model training and inference as an additional detection signal
-- Unit, frontend, and integration testing
-- Architecture, API, packet-analysis, and setup documentation
-
-## Tech Stack
-
-| Area | Planned technology |
-| --- | --- |
-| Frontend | React, Vite, Tailwind CSS, Lucide React |
-| Backend | FastAPI (Python) |
-| Browser investigation | Playwright |
-| Packet capture | Scapy |
-| Packet analysis | Wireshark; programmatic TShark/Scapy approach TBD |
-| Visualisation | Chart.js |
-| Data persistence | None initially; MongoDB optional/TBD |
-| Detection | Rule-based indicators, risk scoring, model training/inference |
-| Live updates | WebSockets (planned) |
+| Layer | Technologies |
+|---|---|
+| Frontend | React, Vite, Tailwind CSS, Recharts, Axios, Lucide React |
+| Backend | Node.js, Express |
+| Packet Capture | Wireshark / TShark |
+| Data Processing | Python, Pandas |
+| Machine Learning | Scikit-learn, Random Forest, Joblib |
+| Database | MongoDB, Mongoose |
+| Real-Time Communication | Socket.IO |
+| Data Exchange | JSON Lines over process stdin/stdout |
 
 ## Project Structure
 
-The following is the intended project layout. Names may evolve as the implementation is built.
-
 ```text
 Phiscatcher/
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── assets/{images,icons}/
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx
-│   │   │   ├── Sidebar.jsx
-│   │   │   ├── StatCard.jsx
-│   │   │   ├── RiskScore.jsx
-│   │   │   ├── TrafficChart.jsx
-│   │   │   ├── ProtocolChart.jsx
-│   │   │   ├── PacketTable.jsx
-│   │   │   ├── DNSPanel.jsx
-│   │   │   ├── HTTPPanel.jsx
-│   │   │   ├── TLSPanel.jsx
-│   │   │   ├── AlertPanel.jsx
-│   │   │   ├── EvidencePanel.jsx
-│   │   │   ├── Timeline.jsx
-│   │   │   └── CaptureStatus.jsx
-│   │   ├── pages/{Home,Dashboard,LiveAnalysis,CaptureHistory,CaptureDetails,Settings}.jsx
-│   │   ├── services/{api,websocket}.js
-│   │   ├── hooks/{useWebSocket,useAnalysis}.js
-│   │   ├── utils/{formatters,risk,constants}.js
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
 ├── backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── api/{routes_scan,routes_analysis,routes_history,routes_health}.py
-│   │   ├── websocket/live_stream.py
-│   │   ├── investigation/
-│   │   │   ├── url_analyzer.py
-│   │   │   ├── domain_analyzer.py
-│   │   │   ├── dns_analyzer.py
-│   │   │   ├── http_analyzer.py
-│   │   │   ├── redirect_analyzer.py
-│   │   │   ├── tls_analyzer.py
-│   │   │   └── browser_scanner.py
-│   │   ├── capture/{capture_manager,interface_detector,filters}.py
-│   │   ├── analysis/{packet_analyzer,protocol_analyzer,dns_traffic_analyzer,tcp_analyzer,http_traffic_analyzer,tls_traffic_analyzer,ip_analyzer}.py
-│   │   ├── detection/{indicators,rules,scoring,verdict}.py
-│   │   ├── models/{packet,traffic,alert,analysis,capture,scan}.py
-│   │   ├── database/{connection,repositories,schemas}.py  # optional/TBD
-│   │   ├── services/{analysis_service,capture_service,threat_intel_service}.py
-│   │   ├── config/settings.py
-│   │   └── utils/{logger,timestamps,helpers}.py
-│   ├── requirements.txt
-│   └── .env.example
-├── packet-captures/
-│   ├── raw/                         # generated PCAP files; do not commit
-│   └── processed/                   # derived scan data; do not commit sensitive data
-├── wireshark/
-│   ├── filters/{http,dns,tcp,tls}_filters.txt
-│   └── profiles/
-├── tests/
-│   ├── backend/{test_capture,test_analysis,test_detection,test_scoring}.py
-│   ├── frontend/
-│   └── integration/test_pipeline.py
-├── docs/
-│   ├── architecture/{system-architecture,data-flow,detection-flow}.md
-│   ├── wireshark/analysis-notes.md
-│   └── API.md
-├── scripts/{start_backend,start_capture,stop_capture,cleanup}.py
-├── .gitignore
-├── README.md
-└── LICENSE
+│   ├── controllers/
+│   ├── models/
+│   ├── routes/
+│   ├── services/
+│   ├── socket/
+│   └── server.js
+│
+├── frontend/
+│   └── src/
+│       ├── components/
+│       ├── services/
+│       ├── App.jsx
+│       └── main.jsx
+│
+├── ml/
+│   ├── packet_processor.py
+│   ├── train_model.py
+│   ├── test_model.py
+│   ├── feature_importance.py
+│   ├── feature_importance.csv
+│   └── phishing_model.pkl
+│
+├── LICENSE
+└── README.md
 ```
+
+## How It Works
+
+1. **TShark** captures selected packet fields from the configured network interface.
+2. **Node.js** parses the captured packet data and forwards it to a persistent Python process.
+3. **Python** groups packets into bidirectional flows and calculates 34 features.
+4. The saved **Random Forest pipeline** produces a phishing probability.
+5. **Node.js** combines the ML probability with heuristic rules using a 70/30 ML-to-rule scoring approach.
+6. The completed flow is classified as **BENIGN**, **SUSPICIOUS**, or **PHISHING**.
+7. The result is stored in **MongoDB**.
+8. **Socket.IO** pushes the new result to the React dashboard.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Git
-- Node.js (current LTS recommended) and npm
-- Python 3.10+ and pip
-- A supported browser for Playwright
-- Wireshark for PCAP inspection
-- Npcap on Windows if required by the chosen capture configuration
+The application requires:
 
-> Packet capture can require administrator privileges and OS-specific configuration. Follow your operating system's security requirements and capture only traffic you are authorized to inspect.
+- Node.js and npm
+- Python 3 with the required ML dependencies
+- Wireshark / TShark
+- MongoDB
+- A network interface accessible to TShark
+- The provided trained model artifact
 
-### 1. Clone the repository
+### Backend
 
-```bash
-git clone https://github.com/KALIGHAT-AC/Phiscatcher.git
-cd Phiscatcher
+```powershell
+cd backend
+npm install express cors dotenv mongoose socket.io
+npm install -D nodemon
+node server.js
 ```
 
-### 2. Set up the frontend
+The backend expects a MongoDB connection string through:
 
-```bash
+```text
+MONGO_URI
+```
+
+The default backend port is **8000**.
+
+### ML
+
+```powershell
+cd ml
+pip install pandas numpy scikit-learn joblib
+```
+The AI is ready to run and analyze data
+
+### Frontend
+
+```powershell
 cd frontend
-npm install
+npm install react react-dom axios lucide-react recharts socket.io-client tailwindcss @tailwindcss/vite
+npm install -D vite@7.3.6 @vitejs/plugin-react@5
 npm run dev
 ```
 
-The Vite development server normally runs at `http://localhost:5173`.
+The frontend is configured to communicate with the local backend.
 
-### 3. Set up the backend
+> The current implementation contains environment-specific capture and API configuration, so TShark installation, interface selection, Python dependencies, and MongoDB connectivity may require adjustment for a different machine.
 
-In a second terminal:
+## Screenshots/Demo
 
-```bash
-cd backend
-python -m venv venv
-```
+### Main Dashboard
 
-Activate the virtual environment:
+![Dashboard](screenshots/dashboard.png)
 
-```powershell
-# Windows PowerShell
-.\venv\Scripts\Activate.ps1
-```
+### Latest Flows
 
-```bash
-# macOS/Linux
-source venv/bin/activate
-```
+![Latest Flows](screenshots/live-flow-analysis.png)
 
-Install dependencies and start FastAPI:
+## Machine Learning
 
-```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+Phiscatcher uses a saved **scikit-learn Random Forest pipeline** for flow classification.
 
-The API normally runs at `http://127.0.0.1:8000`, with interactive API documentation at `http://127.0.0.1:8000/docs`.
+The live processor calculates 34 features covering:
 
-### 4. Install the browser runtime
+- Packet counts and byte totals
+- Sending and receiving traffic
+- Packet-size statistics
+- Packet and byte rates
+- DNS/domain characteristics
+- Character entropy
+- Numerical character percentage
+- Alphabetic and consonant runs
+- Vowel/consonant composition
 
-Once Playwright is included in the backend dependencies, install its browser binaries:
+The trained pipeline performs preprocessing and prediction before returning the phishing probability used by the backend scoring system.
 
-```bash
-playwright install
-```
+## Detection & Scoring
 
-Playwright's role is to visit and observe the **user-submitted URL** in a controlled browser session. It is not used to host a phishing page, simulate a login, or submit credentials.
-
-### 5. Configure packet capture and analysis
-
-- Install Wireshark to open and inspect generated `.pcap` files.
-- Install/configure Npcap on Windows if the capture implementation requires it.
-- Confirm that the selected capture interface and privileges are appropriate.
-- Keep raw captures out of version control and handle them as potentially sensitive artifacts.
-
-The exact automated analysis path (Scapy, TShark, or hybrid) is a project design decision still to be finalized.
-
-### 6. Run a scan
-
-1. Start the frontend and backend.
-2. Open the frontend in your browser.
-3. Enter an `http` or `https` website URL that you are authorized to investigate.
-4. Start the scan and review the status, statistics, evidence, risk score, and verdict.
-5. If enabled, inspect the generated PCAP in Wireshark and consult the scan history for prior results.
-
-## Usage
-
-Phiscatcher combines multiple classes of evidence:
+The final risk score combines:
 
 ```text
-URL/domain signals + DNS observations + HTTP(S)/redirect behaviour
-+ TLS metadata + browser-observed activity + PCAP/protocol statistics
-→ indicators → rules/model signals → risk score → evidence-backed verdict
+70% → Machine-learning probability
+30% → Rule-based score
 ```
 
-Examples of planned outputs include:
+The resulting score determines the displayed classification:
 
-- normalized URL and destination information
-- redirect chain and final destination
-- DNS records and resolved addresses
-- response/header and certificate metadata, where observable
-- protocol and packet-count summaries
-- triggered indicators with explanations
-- risk band and phishing/likely-legitimate assessment
+| Score | Classification |
+|---:|---|
+| ≥ 75 | 🔴 PHISHING |
+| ≥ 40 | 🟡 SUSPICIOUS |
+| < 40 | 🟢 BENIGN |
 
-Encrypted HTTPS payloads must be treated correctly: the project can report observable metadata and traffic characteristics, but must not claim to read credentials or encrypted content merely from a PCAP.
+The rule system considers factors including ML probability, selected destination ports, and suspicious keywords in DNS domain names.
 
-## API and Real-Time Updates
+## API
 
-The frontend is planned to communicate with FastAPI via REST endpoints under `backend/app/api/`. WebSocket support may stream scan progress, capture status, and live statistics to the dashboard. Endpoint contracts and event schemas will be documented in [`docs/API.md`](docs/API.md) as the API is implemented.
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/dashboard/stats` | Dashboard classification statistics |
+| GET | `/api/flows/latest-flows` | Latest five analyzed flows |
 
-## Screenshots / Demo
+Socket.IO provides real-time `new-flow` events to connected dashboard clients.
 
-Screenshots and a live demonstration will be added as the dashboard and scan workflow are implemented.
+## Limitations
 
-```text
-[ Dashboard screenshot placeholder ]
-[ Live analysis screenshot placeholder ]
-[ Evidence and risk-score screenshot placeholder ]
-```
+The current implementation is focused on **live network-flow analysis**. It does not currently provide:
 
-## Safety and Authorized Use
+- URL-based website scanning
+- Browser automation
+- Playwright integration
+- Scapy-based packet processing
+- PCAP file generation
+- HTTP/TLS payload inspection
+- Threat-intelligence integration
+- Automated project test suites
 
-Use Phiscatcher only for URLs, systems, networks, and traffic that you own or are explicitly authorized to assess. A submitted URL can cause a browser to contact external systems, and packet captures may contain sensitive metadata. Do not use the project to probe systems without permission, submit credentials, bypass controls, or collect data beyond the authorized scope.
+The training datasets are not included in the repository, so model training and evaluation cannot be reproduced from this checkout alone.
 
-Run browser investigations with appropriate isolation and avoid interacting with forms or downloads unless the project has an approved, safe procedure for doing so.
+## Safety & Authorized Use
+
+Only capture and analyze traffic on systems and networks that you own or are explicitly authorized to inspect.
+
+Network addresses and DNS information can contain sensitive data. Use the application responsibly and in accordance with applicable laws, policies, and organizational requirements.
 
 ## Future Scope
 
-- Finalize the Scapy/Wireshark/TShark integration design
-- Add configurable capture filtering and safer browser isolation
-- Add calibrated risk-score thresholds and evaluation datasets
-- Add trained-model inference with explainable feature reporting
-- Add optional MongoDB-backed scan history
-- Add threat-intelligence integrations subject to approved data sources
-- Export scan reports and evidence bundles
-- Add role-based access, retention controls, and privacy protections
-- Expand automated test coverage and performance testing
+Potential improvements include:
 
-## 👥 Team & Contributions
+- Configurable network-interface and capture settings
+- Improved API/environment configuration
+- Reproducible model-training datasets and evaluation
+- Model calibration and performance analysis
+- Expanded threat-intelligence integration
+- PCAP export and deeper packet analysis
+- Automated testing
+- Improved dashboard analytics and historical visualization
 
-### Contributors
+## Contributors
 
-* **Frontend Development** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
-* **Backend Development** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
-* **Packet Capture & Analysis** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
-* **Browser Automation** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
-* **Threat Detection & Model Training** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl)
-* **Documentation & Testing** → [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl) and [@KALIGHAT-AC](https://github.com/KALIGHAT-AC)
-* **Bootloader** →
+| Area | Contributor |
+|---|---|
+| Frontend Development | [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl) |
+| Backend Development | [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl) |
+| Packet Capture & Analysis | [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl) |
+| Machine Learning | [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl) |
+| Documentation & Testing | [@Shivayan-Tmsl](https://github.com/Shivayan-Tmsl) & [@KALIGHAT-AC](https://github.com/KALIGHAT-AC) |
 
-### 🤝 Contribution Guidelines
+## License
 
-Contributions are welcome.
-
-For team development, contributors are encouraged to:
-
-1. Clone the repository.
-2. Create a dedicated branch.
-3. Make the required changes.
-4. Test the changes locally.
-5. Commit the changes with a meaningful message.
-6. Push the branch.
-7. Open a Pull Request.
-8. Wait for review before merging into `main`.
-
-Example:
-
-```bash
-git checkout -b feature/your-feature
-```
-
-After making changes:
-
-```bash
-git add .
-git commit -m "Add your feature"
-git push origin feature/your-feature
-```
-
-Then create a Pull Request on GitHub.
+This project is licensed under the **MIT License**. See [LICENSE](./LICENSE) for details.
 
 ---
 
-## ⚠️ Disclaimer
-
-Phiscatcher is intended strictly for:
-
-- Educational purposes
-- Cybersecurity research
-- Controlled laboratory environments
-- Authorized security testing
-- Phishing-analysis demonstrations
-
-All simulated credentials and traffic should be synthetic.
-
-**Do not use this project to collect, intercept, or analyze credentials or network traffic belonging to users, systems, or organizations without explicit authorization.**
-
----
-
-## 📄 License
-
-This project is licensed under the terms specified in the project's [LICENSE](./LICENSE) file.
-
----
-
-<p align="center">
-
-### 🛡️ Phiscatcher
-
-*Capture the traffic. Analyse the evidence. Catch the phish.*
-
-</p>
+### Capture the traffic. Analyse the evidence. Catch the phish. 🛡️
